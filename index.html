@@ -119,7 +119,7 @@
             scene.primitives.add(circle);
             circle.setEditable();
             circle.addListener('onEdited', function(event) {
-                loggingMessage('Circle edited: radius is ' + event.radius.toFixed(1) + ' meters');
+                loggingMessage('Circle edited: center is ' + event.center.toString() + ' and radius is ' + event.radius.toFixed(1) + ' meters');
             });
         });
         toolbar.addListener('extentCreated', function(event) {
