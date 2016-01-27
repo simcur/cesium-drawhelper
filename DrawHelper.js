@@ -801,7 +801,9 @@ var DrawHelper = (function() {
 
         this.startDrawing(
             function() {
-                markers.remove();
+                if (markers != null) {
+                    markers.remove();
+                }
                 mouseHandler.destroy();
                 tooltip.setVisible(false);
             }
@@ -857,7 +859,9 @@ var DrawHelper = (function() {
         this.startDrawing(
             function() {
                 primitives.remove(poly);
-                markers.remove();
+                if (markers != null) {
+                    markers.remove();
+                }
                 mouseHandler.destroy();
                 tooltip.setVisible(false);
             }
@@ -968,7 +972,9 @@ var DrawHelper = (function() {
                 if(extent != null) {
                     primitives.remove(extent);
                 }
-                markers.remove();
+                if (markers != null) {
+                    markers.remove();
+                }
                 mouseHandler.destroy();
                 tooltip.setVisible(false);
             }
@@ -1050,7 +1056,9 @@ var DrawHelper = (function() {
                 if(circle != null) {
                     primitives.remove(circle);
                 }
-                markers.remove();
+                if (markers != null) {
+                    markers.remove();
+                }
                 mouseHandler.destroy();
                 tooltip.setVisible(false);
             }
