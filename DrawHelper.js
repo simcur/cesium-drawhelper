@@ -593,6 +593,9 @@ var DrawHelper = (function() {
 
         _.prototype.setPositions = function(positions) {
             this.setAttribute('positions', positions);
+            if (this._editMode) {
+                this._updateMarkers();
+            }
         };
 
         _.prototype.setWidth = function(width) {
@@ -1205,42 +1208,25 @@ var DrawHelper = (function() {
             }
         }
 
-        _.PolygonPrimitive.prototype._updateMarkers = function _updateMarkers() {
-            function calculateHalfMarkerPosition(index) {
-                var positions = this.positions;
-                return ellipsoid.cartographicToCartesian(
-                        new Cesium.EllipsoidGeodesic(ellipsoid.cartesianToCartographic(positions[index]),
-                            ellipsoid.cartesianToCartographic(positions[index < positions.length - 1 ? index + 1 : 0])).
-                        interpolateUsingFraction(0.5)
-                        );
-            }
+        function _updateMarkers() {
+            var index;
+            var billboard;
+            var newMarkerPosition;
 
             // update "markers" (position handles)
-            // update "edit markers" (mid-position handles)
-
-            while(this._markers._orderedBillboards.length > this.positions.length) {
-                this._markers.removeBillboard(this._markers._orderedBillboards.length - 1);
-                this._editMarkers.removeBillboard(this._editMarkers._orderedBillboards.length - 1);
-            }
-
-            var newMarkerPosition;
-            if (this._editMarkers._orderedBillboards.length < this.positions.length) {
+            if (this._markers._orderedBillboards.length < this.positions.length) {
                 var markerChangeHandlers = _getMarkerChangeHandlers(this);
-                var editMarkerChangeHandlers = _getEditMarkerChangeHandlers(this);
-                while (this._editMarkers._orderedBillboards.length < this.positions.length) {
+                while (this._markers._orderedBillboards.length < this.positions.length) {
                     newMarkerPosition = this.positions[this._markers._orderedBillboards.length - 1];
                     this._markers.addBillboard(newMarkerPosition, markerChangeHandlers);
-                    this._editMarkers.addBillboard(newMarkerPosition, editMarkerChangeHandlers);
                 }
             }
 
-            var i = 0;
-            var index = 0;
-            var length = this.positions.length + (this.isPolygon ? 0 : -1);
-            var positionCart = new Cesium.Cartographic();
-            var billboard;
+            while(this._markers._orderedBillboards.length > this.positions.length) {
+                this._markers.removeBillboard(this._markers._orderedBillboards.length - 1);
+            }
 
-            for(; index < length; index++) {
+            for(index = 0; index < this.positions.length; index++) {
                 billboard = this._markers.getBillboard(index);
                 // there may not be a billboard yet if e.g. the user is adding a point
                 if (billboard) {
@@ -1248,12 +1234,38 @@ var DrawHelper = (function() {
                 }
             }
 
+            // update "edit markers" (mid-position handles)
+            var editMarkerLength = this.isPolygon ? this.positions.length : this.positions.length - 1;
+            if (this._editMarkers._orderedBillboards.length < editMarkerLength) {
+                var editMarkerChangeHandlers = _getEditMarkerChangeHandlers(this);
+                while (this._editMarkers._orderedBillboards.length < editMarkerLength) {
+                    newMarkerPosition = this.positions[this._editMarkers._orderedBillboards.length - 1];
+                    this._editMarkers.addBillboard(newMarkerPosition, editMarkerChangeHandlers);
+                }
+            }
+
+            while(this._editMarkers._orderedBillboards.length > editMarkerLength) {
+                this._editMarkers.removeBillboard(this._editMarkers._orderedBillboards.length - 1);
+            }
+
             // update "edit" ("creation"; mid/half) point marker positions
-            length = this._editMarkers.countBillboards();
-            for(index = 0; index < length; index++) {
-                this._editMarkers.getBillboard(index).position = calculateHalfMarkerPosition.bind(this)(index);
+            for (index = 0; index < editMarkerLength; index++) {
+                billboard = this._editMarkers.getBillboard(index);
+                if (billboard) {
+                    billboard.position = _calculateHalfMarkerPosition(this.positions, index);
+                }
             }
         };
+
+        _.PolylinePrimitive.prototype._updateMarkers = _updateMarkers;
+        _.PolygonPrimitive.prototype._updateMarkers = _updateMarkers;
+
+        function _calculateHalfMarkerPosition(positions, index) {
+            return ellipsoid.cartographicToCartesian(
+                new Cesium.EllipsoidGeodesic(ellipsoid.cartesianToCartographic(positions[index]),
+                ellipsoid.cartesianToCartographic(positions[index < positions.length - 1 ? index + 1 : 0])).interpolateUsingFraction(0.5)
+            );
+        }
 
         function _getMarkerChangeHandlers(_self) {
             function onEdited() {
@@ -1264,21 +1276,12 @@ var DrawHelper = (function() {
                 // update the half markers before and after the index
                 var editIndex = index - 1 < 0 ? positions.length - 1 : index - 1;
                 if(editIndex < _self._editMarkers.countBillboards()) {
-                    _self._editMarkers.getBillboard(editIndex).position = calculateHalfMarkerPosition(editIndex);
+                    _self._editMarkers.getBillboard(editIndex).position = _calculateHalfMarkerPosition(_self.positions, editIndex);
                 }
                 editIndex = index;
                 if(editIndex < _self._editMarkers.countBillboards()) {
-                    _self._editMarkers.getBillboard(editIndex).position = calculateHalfMarkerPosition(editIndex);
+                    _self._editMarkers.getBillboard(editIndex).position = _calculateHalfMarkerPosition(_self.positions, editIndex);
                 }
-            }
-
-            function calculateHalfMarkerPosition(index) {
-                var positions = _self.positions;
-                return ellipsoid.cartographicToCartesian(
-                    new Cesium.EllipsoidGeodesic(ellipsoid.cartesianToCartographic(positions[index]),
-                        ellipsoid.cartesianToCartographic(positions[index < positions.length - 1 ? index + 1 : 0])).
-                        interpolateUsingFraction(0.5)
-                );
             }
 
             return {
@@ -1336,15 +1339,6 @@ var DrawHelper = (function() {
                 _self.executeListeners({name: 'onEdited', positions: _self.positions});
             }
 
-            function calculateHalfMarkerPosition(index) {
-                var positions = _self.positions;
-                return ellipsoid.cartographicToCartesian(
-                    new Cesium.EllipsoidGeodesic(ellipsoid.cartesianToCartographic(positions[index]),
-                        ellipsoid.cartesianToCartographic(positions[index < positions.length - 1 ? index + 1 : 0])).
-                        interpolateUsingFraction(0.5)
-                );
-            }
-
             return {
                 dragHandlers: {
                     onDragStart: function(index, position) {
@@ -1357,8 +1351,8 @@ var DrawHelper = (function() {
 
                         // add a new marker (and "edit" markers)...
                         _self._markers.insertBillboard(this.index, position, _getMarkerChangeHandlers(_self));
-                        _self._editMarkers.getBillboard(this.index - 1).position = calculateHalfMarkerPosition(this.index - 1);
-                        _self._editMarkers.insertBillboard(this.index, calculateHalfMarkerPosition(this.index), _getEditMarkerChangeHandlers(_self));
+                        _self._editMarkers.getBillboard(this.index - 1).position = _calculateHalfMarkerPosition(_self.positions, this.index - 1);
+                        _self._editMarkers.insertBillboard(this.index, _calculateHalfMarkerPosition(_self.positions, this.index), _getEditMarkerChangeHandlers(_self));
 
                         onEdited();
                     },
@@ -1367,16 +1361,16 @@ var DrawHelper = (function() {
                         _self._createPrimitive = true;
 
                         _self._markers.getBillboard(this.index).position = position;
-                        _self._editMarkers.getBillboard(this.index - 1).position = calculateHalfMarkerPosition(this.index - 1);
-                        _self._editMarkers.getBillboard(this.index).position = calculateHalfMarkerPosition(this.index);
+                        _self._editMarkers.getBillboard(this.index - 1).position = _calculateHalfMarkerPosition(_self.positions, this.index - 1);
+                        _self._editMarkers.getBillboard(this.index).position = _calculateHalfMarkerPosition(_self.positions, this.index);
 
                         onEdited();
                     },
                     onDragEnd: function(index, position) {
                         // create new sets of makers for editing
                         //_self._markers.insertBillboard(this.index, position, handleMarkerChanges);
-                        //_self._editMarkers.getBillboard(this.index - 1).position = calculateHalfMarkerPosition(this.index - 1);
-                        //_self._editMarkers.insertBillboard(this.index, calculateHalfMarkerPosition(this.index), handleEditMarkerChanges);
+                        //_self._editMarkers.getBillboard(this.index - 1).position = _calculateHalfMarkerPosition(_self.positions, this.index - 1);
+                        //_self._editMarkers.insertBillboard(this.index, _calculateHalfMarkerPosition(_self.positions, this.index), handleEditMarkerChanges);
                         _self._createPrimitive = true;
 
                         delete _self._handlingDragOperation;
@@ -1410,19 +1404,12 @@ var DrawHelper = (function() {
                         // add billboards and keep an ordered list of them for the polygon edges
                         markers.addBillboards(_self.positions, handleMarkerChanges);
                         this._markers = markers;
-                        function calculateHalfMarkerPosition(index) {
-                            var positions = _self.positions;
-                            return ellipsoid.cartographicToCartesian(
-                                new Cesium.EllipsoidGeodesic(ellipsoid.cartesianToCartographic(positions[index]),
-                                    ellipsoid.cartesianToCartographic(positions[index < positions.length - 1 ? index + 1 : 0])).
-                                    interpolateUsingFraction(0.5)
-                            );
-                        }
+
                         var halfPositions = [];
                         var index = 0;
                         var length = _self.positions.length + (this.isPolygon ? 0 : -1);
                         for(; index < length; index++) {
-                            halfPositions.push(calculateHalfMarkerPosition(index));
+                            halfPositions.push(_calculateHalfMarkerPosition(_self.positions, index));
                         }
                         var handleEditMarkerChanges = _getEditMarkerChangeHandlers(this);
                         editMarkers.addBillboards(halfPositions, handleEditMarkerChanges);
@@ -1487,7 +1474,7 @@ var DrawHelper = (function() {
                                     // update "edit" ("creation"; mid/half) point marker positions
                                     length = _self._editMarkers.countBillboards();
                                     for(index = 0; index < length; index++) {
-                                        _self._editMarkers.getBillboard(index).position = calculateHalfMarkerPosition(index);
+                                        _self._editMarkers.getBillboard(index).position = _calculateHalfMarkerPosition(_self.positions, index);
                                     }
 
                                     _self._createPrimitive = true;
@@ -1524,7 +1511,7 @@ var DrawHelper = (function() {
                                     // update "edit" ("creation"; mid/half) point marker positions
                                     length = _self._editMarkers.countBillboards();
                                     for(index = 0; index < length; index++) {
-                                        _self._editMarkers.getBillboard(index).position = calculateHalfMarkerPosition(index);
+                                        _self._editMarkers.getBillboard(index).position = _calculateHalfMarkerPosition(_self.positions, index);
                                     }
 
                                     _self._createPrimitive = true;
