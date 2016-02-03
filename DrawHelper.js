@@ -1315,7 +1315,8 @@ var DrawHelper = (function() {
                     }
                 },
                 onDoubleClick: function(index) {
-                    if(_self.positions.length < 4) {
+                    var minLength = _self.isPolygon ? 3 : 2;
+                    if(_self.positions.length <= minLength) {
                         return;
                     }
                     // remove the point and the corresponding markers
@@ -1323,7 +1324,7 @@ var DrawHelper = (function() {
                     _self._createPrimitive = true;
                     _self._markers.removeBillboard(index);
                     _self._editMarkers.removeBillboard(index);
-                    updateHalfMarkers(index, _self.positions);
+                    _self._updateMarkers();
                     onEdited();
                 },
                 tooltip: function() {
@@ -1384,7 +1385,7 @@ var DrawHelper = (function() {
             };
         }
 
-        function setEditMode(editMode) {
+        function setPolyshapeEditMode(editMode) {
                 // if no change
                 if(this._editMode == editMode) {
                     return;
@@ -1583,7 +1584,7 @@ var DrawHelper = (function() {
 
                 drawHelper.registerEditableShape(polyline);
 
-                polyline.setEditMode = setEditMode;
+                polyline.setEditMode = setPolyshapeEditMode;
 
                 var originalWidth = this.width;
 
@@ -1629,7 +1630,7 @@ var DrawHelper = (function() {
 
                 drawHelper.registerEditableShape(polygon);
 
-                polygon.setEditMode = setEditMode;
+                polygon.setEditMode = setPolyshapeEditMode;
 
                 polygon.setHighlighted = setHighlighted;
 
