@@ -1292,25 +1292,14 @@ var DrawHelper = (function() {
                         _self.positions[index] = position;
                         updateHalfMarkers(index, _self.positions);
                         _self._createPrimitive = true;
-
-                        onEdited();
                     },
                     onDrag: function(index, position) {
                         _self.positions[index] = position;
                         updateHalfMarkers(index, _self.positions);
                         _self._createPrimitive = true;
-
-                        onEdited();
                     },
                     onDragEnd: function(index, position) {
-                        if (position) {
-                            _self.positions[index] = position;
-                            updateHalfMarkers(index, _self.positions);
-                            _self._createPrimitive = true;
-                        }
-
                         delete _self._handlingDragOperation;
-
                         onEdited();
                     }
                 },
@@ -1354,8 +1343,6 @@ var DrawHelper = (function() {
                         _self._markers.insertBillboard(this.index, position, _getMarkerChangeHandlers(_self));
                         _self._editMarkers.getBillboard(this.index - 1).position = _calculateHalfMarkerPosition(_self.positions, this.index - 1);
                         _self._editMarkers.insertBillboard(this.index, _calculateHalfMarkerPosition(_self.positions, this.index), _getEditMarkerChangeHandlers(_self));
-
-                        onEdited();
                     },
                     onDrag: function(index, position) {
                         _self.positions[this.index] = position;
@@ -1364,18 +1351,9 @@ var DrawHelper = (function() {
                         _self._markers.getBillboard(this.index).position = position;
                         _self._editMarkers.getBillboard(this.index - 1).position = _calculateHalfMarkerPosition(_self.positions, this.index - 1);
                         _self._editMarkers.getBillboard(this.index).position = _calculateHalfMarkerPosition(_self.positions, this.index);
-
-                        onEdited();
                     },
                     onDragEnd: function(index, position) {
-                        // create new sets of makers for editing
-                        //_self._markers.insertBillboard(this.index, position, handleMarkerChanges);
-                        //_self._editMarkers.getBillboard(this.index - 1).position = _calculateHalfMarkerPosition(_self.positions, this.index - 1);
-                        //_self._editMarkers.insertBillboard(this.index, _calculateHalfMarkerPosition(_self.positions, this.index), handleEditMarkerChanges);
-                        _self._createPrimitive = true;
-
                         delete _self._handlingDragOperation;
-
                         onEdited();
                     }
                 },
@@ -1479,9 +1457,6 @@ var DrawHelper = (function() {
                                     }
 
                                     _self._createPrimitive = true;
-
-                                    onEdited();
-
                                     _self._initialPrimitiveDragPosition = position;
                                 },
                                 onDragEnd: function onDragEnd(position) {
@@ -1888,8 +1863,6 @@ var DrawHelper = (function() {
 
                                         _self._createPrimitive = true;
 
-                                        onEdited();
-
                                         _self._initialPrimitiveDragPosition = position;
                                     },
                                     onDragEnd: function onDragEnd(position) {
@@ -2067,8 +2040,6 @@ var DrawHelper = (function() {
                                         markers.updateBillboardsPositions(_self._getMarkerPositions());
 
                                         _self._createPrimitive = true;
-
-                                        onEdited();
 
                                         _self._initialPrimitiveDragPosition = position;
                                     },
