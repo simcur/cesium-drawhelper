@@ -1638,6 +1638,7 @@ var DrawHelper = (function() {
                     if(this._editMode == editMode) {
                         return;
                     }
+                    var _self = this;
                     drawHelper.disableAllHighlights();
                     // display markers
                     if(editMode) {
@@ -1666,14 +1667,83 @@ var DrawHelper = (function() {
                             };
                             markers.addBillboards(getExtentCorners(extent.extent), handleMarkerChanges);
                             this._markers = markers;
-                            // add a handler for clicking in the globe
-                            this._globeClickhandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
-                            this._globeClickhandler.setInputAction(
+
+                            var handlePrimitiveChanges = {
+                                dragHandlers: {
+                                    onDragStart: function onExtentDragStart(position) {
+                                        //// INTIALIZE DRAGGING-OPERATION
+
+                                        // setup dragging-operation
+                                        _self._handlingDragOperation = true;
+                                        _self._initialPrimitiveDragPosition = position;
+
+                                        scene.screenSpaceCameraController.enableInputs = false;
+
+                                        _self._screenSpaceEventHandler.setInputAction(function _handleMouseMove(movement) {
+                                            var position = scene.camera.pickEllipsoid(movement.endPosition, ellipsoid);
+                                            if (position) {
+                                                position = ellipsoid.cartesianToCartographic(position);
+                                                handlePrimitiveChanges.dragHandlers.onDrag(position);
+                                            } else {
+                                                handlePrimitiveChanges.dragHandlers.onDragEnd();
+                                            }
+                                        }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+                                        _self._screenSpaceEventHandler.setInputAction(function _handleMouseUp(movement) {
+                                            var position = scene.camera.pickEllipsoid(movement.position, ellipsoid);
+                                            position = ellipsoid.cartesianToCartographic(position);
+                                            handlePrimitiveChanges.dragHandlers.onDragEnd(position);
+                                        }, Cesium.ScreenSpaceEventType.LEFT_UP);
+                                    },
+                                    onDrag: function onExtentDrag(position) {
+                                        var translation = new Cesium.Cartesian2(position.longitude - _self._initialPrimitiveDragPosition.longitude, position.latitude - _self._initialPrimitiveDragPosition.latitude);
+
+                                        // update extent primitive and marker positions
+                                        var corners = getExtentCorners(_self.extent);
+                                        var northwestCorner = ellipsoid.cartesianToCartographic(corners[0]);
+                                        var southeastCorner = ellipsoid.cartesianToCartographic(corners[2]);
+                                        northwestCorner.longitude += translation.x;
+                                        northwestCorner.latitude += translation.y;
+                                        southeastCorner.longitude += translation.x;
+                                        southeastCorner.latitude += translation.y;
+
+                                        _self._createPrimitive = true;
+                                        _self.extent = getExtent(northwestCorner, southeastCorner);
+                                        _self._markers.updateBillboardsPositions(getExtentCorners(extent.extent));
+
+                                        _self._initialPrimitiveDragPosition = position;
+                                    },
+                                    onDragEnd: function onExtentDragEnd(position) {
+                                        onEdited();
+
+                                        _self._screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+                                        _self._screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_UP);
+
+                                        scene.screenSpaceCameraController.enableInputs = true;
+
+                                        //// cleanup dragging-operation
+                                        delete _self._handlingDragOperation;
+                                        delete _self._initialPrimitiveDragPosition;
+                                    }
+                                }
+                            };
+
+                            // add a handler for ...
+                            this._screenSpaceEventHandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
+                            this._screenSpaceEventHandler.setInputAction(function _handleMouseDown(movement) {
+                                var pickedObject = scene.pick(movement.position);
+                                if (pickedObject && pickedObject.primitive && pickedObject.primitive === _self && !_self._handlingDragOperation) {
+                                    var position = ellipsoid.cartesianToCartographic(scene.camera.pickEllipsoid(movement.position, ellipsoid));
+                                    handlePrimitiveChanges.dragHandlers.onDragStart(position);
+                                }
+                            }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+                            this._screenSpaceEventHandler.setInputAction(
                                 function (movement) {
                                     var pickedObject = scene.pick(movement.position);
-                                    // disable edit if pickedobject is different or not an object
-                                    if(!(pickedObject && !pickedObject.isDestroyed() && pickedObject.primitive)) {
-                                        extent.setEditMode(false);
+                                    if (!(pickedObject && pickedObject.primitive)) {
+                                        // user clicked the globe; cancel the edit mode
+                                        _self.setEditMode(false);
                                     }
                                 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
@@ -1685,7 +1755,7 @@ var DrawHelper = (function() {
                         if(this._markers != null) {
                             this._markers.remove();
                             this._markers = null;
-                            this._globeClickhandler.destroy();
+                            this._screenSpaceEventHandler.destroy();
                         }
                         this._editMode = false;
                     }
