@@ -1801,9 +1801,9 @@ var DrawHelper = (function() {
                             this._screenSpaceEventHandler.setInputAction(
                                 function (movement) {
                                     var pickedObject = scene.pick(movement.position);
-                                    if (!(pickedObject && pickedObject.primitive)) {
-                                        // user clicked the globe; cancel the edit mode
-                                        _self.setEditMode(false);
+                                    // disable edit if pickedobject is different or not an object
+                                    if(!(pickedObject && pickedObject.isDestroyed && !pickedObject.isDestroyed() && pickedObject.primitive)) {
+                                        extent.setEditMode(false);
                                     }
                                 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
