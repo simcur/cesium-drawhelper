@@ -1644,6 +1644,59 @@ var DrawHelper = (function() {
                     if(editMode) {
                         // make sure all other shapes are not in edit mode before starting the editing of this shape
                         drawHelper.setEdited(this);
+
+                        function isExtentResizeValid(movedCornerIndex, movedCornerCartographic, oppositeCornerCartographic) {
+                            var DATELINE_OFFSET = 2.0;
+                            var movedCornerPosition;
+                                switch (movedCornerIndex) {
+                                    case 0:
+                                        movedCornerPosition = 'nw';
+                                        break;
+                                    case 1:
+                                        movedCornerPosition = 'ne';
+                                        break;
+                                    case 2:
+                                        movedCornerPosition = 'se';
+                                        break;
+                                    case 3:
+                                        movedCornerPosition = 'sw';
+                                        break;
+                                    default:
+                                        console.error('This should never happen, index should always be from 0 - 3. It is %d', movedCornerIndex);
+                                };
+
+                            var isResizeValid = true;
+                            if (movedCornerPosition === 'nw' || movedCornerPosition === 'ne') {
+                                if (movedCornerCartographic.latitude < oppositeCornerCartographic.latitude) {
+                                    isResizeValid = false;
+                                }
+                            }
+
+                            if (movedCornerPosition === 'sw' || movedCornerPosition === 'se') {
+                                if (movedCornerCartographic.latitude > oppositeCornerCartographic.latitude) {
+                                    isResizeValid = false;
+                                }
+                            }
+
+                            if (movedCornerPosition === 'nw' || movedCornerPosition === 'sw') {
+                                //large diff means they are resizing over the dateline
+                                var diff = movedCornerCartographic.longitude - oppositeCornerCartographic.longitude;
+                                if (movedCornerCartographic.longitude > oppositeCornerCartographic.longitude && diff < DATELINE_OFFSET) {
+                                    isResizeValid = false;
+                                }
+                            }
+
+                            if (movedCornerPosition === 'ne' || movedCornerPosition === 'se') {
+                                //large diff means they are resizing over the dateline
+                                var diff = oppositeCornerCartographic.longitude - movedCornerCartographic.longitude;
+                                if (movedCornerCartographic.longitude < oppositeCornerCartographic.longitude && diff < DATELINE_OFFSET) {
+                                    isResizeValid = false;
+                                }
+                            }
+
+                            return isResizeValid;
+                        }
+
                         // create the markers and handlers for the editing
                         if(this._markers == null) {
                             var markers = new _.BillboardGroup(drawHelper, dragBillboard);
@@ -1652,9 +1705,16 @@ var DrawHelper = (function() {
                             }
                             var handleMarkerChanges = {
                                 dragHandlers: {
-                                    onDrag: function(index, position) {
-                                        var corner = markers.getBillboard((index + 2) % 4).position;
-                                        extent.setExtent(getExtent(ellipsoid.cartesianToCartographic(corner), ellipsoid.cartesianToCartographic(position)));
+                                    onDrag: function(movedCornerIndex, position) {
+                                        var movedCornerCartographic = ellipsoid.cartesianToCartographic(position);
+                                        var oppositeCorner = markers.getBillboard((movedCornerIndex + 2) % 4).position;
+                                        var oppositeCornerCartographic = ellipsoid.cartesianToCartographic(oppositeCorner);
+
+                                        if (isExtentResizeValid(movedCornerIndex, movedCornerCartographic, oppositeCornerCartographic)) {
+                                            extent.setExtent(getExtent(oppositeCornerCartographic, movedCornerCartographic));
+                                        }
+
+                                        // outside of the if to put the marker back where it stopped instead of allowing it to continue to move
                                         markers.updateBillboardsPositions(getExtentCorners(extent.extent));
                                     },
                                     onDragEnd: function(index, position) {
@@ -1741,9 +1801,9 @@ var DrawHelper = (function() {
                             this._screenSpaceEventHandler.setInputAction(
                                 function (movement) {
                                     var pickedObject = scene.pick(movement.position);
-                                    if (!(pickedObject && pickedObject.primitive)) {
-                                        // user clicked the globe; cancel the edit mode
-                                        _self.setEditMode(false);
+                                    // disable edit if pickedobject is different or not an object
+                                    if(!(pickedObject && pickedObject.isDestroyed && !pickedObject.isDestroyed() && pickedObject.primitive)) {
+                                        extent.setEditMode(false);
                                     }
                                 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
