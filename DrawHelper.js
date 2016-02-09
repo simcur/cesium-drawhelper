@@ -510,24 +510,32 @@ var DrawHelper = (function() {
 
         _.prototype.setCenter = function(center) {
             this.setAttribute('center', center);
-            this._markers.updateBillboardsPositions(this._getMarkerPositions());
+            if (this._markers) {
+                this._markers.updateBillboardsPositions(this._getMarkerPositions());
+            }
         };
 
         _.prototype.setSemiMajorAxis = function(semiMajorAxis) {
             if(semiMajorAxis < this.getSemiMinorAxis()) return;
             this.setAttribute('semiMajorAxis', semiMajorAxis);
-            this._markers.updateBillboardsPositions(this._getMarkerPositions());
+            if (this._markers) {
+                this._markers.updateBillboardsPositions(this._getMarkerPositions());
+            }
         };
 
         _.prototype.setSemiMinorAxis = function(semiMinorAxis) {
             if(semiMinorAxis > this.getSemiMajorAxis()) return;
             this.setAttribute('semiMinorAxis', semiMinorAxis);
-            this._markers.updateBillboardsPositions(this._getMarkerPositions());
+            if (this._markers) {
+                this._markers.updateBillboardsPositions(this._getMarkerPositions());
+            }
         };
 
         _.prototype.setRotation = function(rotation) {
             var result = this.setAttribute('rotation', rotation);
-            this._markers.updateBillboardsPositions(this._getMarkerPositions());
+            if (this._markers) {
+                this._markers.updateBillboardsPositions(this._getMarkerPositions());
+            }
             return result;
         };
 
@@ -554,7 +562,6 @@ var DrawHelper = (function() {
             }
 
             return new Cesium.EllipseGeometry({
-                        ellipsoid : this.ellipsoid,
                         center : this.center,
                         semiMajorAxis : this.semiMajorAxis,
                         semiMinorAxis : this.semiMinorAxis,
@@ -1121,7 +1128,92 @@ var DrawHelper = (function() {
             }
         }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
-    }
+    };
+
+    _.prototype.startDrawingEllipse = function startDrawingEllipse(options) {
+
+        var options = copyOptions(options, defaultSurfaceOptions);
+
+        this.startDrawing(
+            function cleanUp() {
+                if(ellipse != null) {
+                    primitives.remove(ellipse);
+                }
+                if (markers != null) {
+                    markers.remove();
+                }
+                mouseHandler.destroy();
+                tooltip.setVisible(false);
+            }
+        );
+
+        var _self = this;
+        var scene = this._scene;
+        var primitives = this._scene.primitives;
+        var tooltip = this._tooltip;
+
+        var ellipse = null;
+        var markers = null;
+
+        var mouseHandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
+
+        // Now wait for start
+        mouseHandler.setInputAction(function _onLeftDown(movement) {
+            if(movement.position != null) {
+                var cartesian = scene.camera.pickEllipsoid(movement.position, ellipsoid);
+                if (cartesian) {
+                    if(ellipse == null) {
+                        ellipse = new _.EllipsePrimitive({
+                            ellipsoid: options.ellipsoid || Cesium.Ellipsoid.WGS84,
+                            center: cartesian,
+                            semiMajorAxis: 1,
+                            semiMinorAxis: 1,
+                            rotation: 0,
+                            height: options.height || 0,
+                            vertexFormat: Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT,
+                            material : options.material,
+                            stRotation: 0,
+                            granularity: options.granularity || Math.PI / 180.0
+                        });
+
+                        ellipse.asynchronous = false;
+
+                        primitives.add(ellipse);
+                        markers = new _.BillboardGroup(_self, defaultBillboard);
+                        markers.addBillboards([cartesian]);
+                    } else {
+                        if(typeof options.callback == 'function') {
+                            options.callback({
+                                center: ellipse.center,
+                                rotation: ellipse.rotation,
+                                semiMajorAxis: ellipse.semiMajorAxis,
+                                semiMinorAxis: ellipse.semiMinorAxis
+                            });
+                        }
+                        _self.stopDrawing();
+                    }
+                }
+            }
+        }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+        mouseHandler.setInputAction(function _onMouseMove(movement) {
+            var position = movement.endPosition;
+            if(position != null) {
+                if(ellipse == null) {
+                    tooltip.showAt(position, "<p>Click to start drawing the ellipse</p>");
+                } else {
+                    var cartesian = scene.camera.pickEllipsoid(position, ellipsoid);
+                    if (cartesian) {
+                        var semiMajorAxis = Cesium.Cartesian3.distance(ellipse.getCenter(), cartesian);
+                        ellipse.setSemiMajorAxis(semiMajorAxis);
+                        ellipse.setSemiMinorAxis(semiMajorAxis/3);
+                        markers.updateBillboardsPositions(cartesian);
+                        tooltip.showAt(position, "<p>Move mouse to change ellipse semi major axis</p><p>Click again to finish drawing</p>");
+                    }
+                }
+            }
+        }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+    };
 
     _.prototype.enhancePrimitives = function() {
 
@@ -2260,12 +2352,14 @@ var DrawHelper = (function() {
                 polylineIcon: "./img/glyphicons_097_vector_path_line.png",
                 polygonIcon: "./img/glyphicons_096_vector_path_polygon.png",
                 circleIcon: "./img/glyphicons_095_vector_path_circle.png",
+                ellipseIcon: "./img/glyphicons_095_vector_path_ellipse.png",
                 extentIcon: "./img/glyphicons_094_vector_path_square.png",
                 clearIcon: "./img/glyphicons_067_cleaning.png",
                 polylineDrawingOptions: defaultPolylineOptions,
                 polygonDrawingOptions: defaultPolygonOptions,
                 extentDrawingOptions: defaultExtentOptions,
-                circleDrawingOptions: defaultCircleOptions
+                circleDrawingOptions: defaultCircleOptions,
+                circleEllipseOptions: defaultEllipseOptions
             };
 
             fillOptions(options, drawOptions);
@@ -2328,6 +2422,14 @@ var DrawHelper = (function() {
                 drawHelper.startDrawingCircle({
                     callback: function(center, radius) {
                         _self.executeListeners({name: 'circleCreated', center: center, radius: radius});
+                    }
+                });
+            })
+
+            addIcon('ellipse', options.ellipseIcon, 'Click to start drawing an Ellipse', function() {
+                drawHelper.startDrawingEllipse({
+                    callback: function(ellipse) {
+                        _self.executeListeners({name: 'ellipseCreated', ellipse: ellipse});
                     }
                 });
             })

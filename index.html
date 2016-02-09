@@ -122,6 +122,21 @@
                 loggingMessage('Circle edited: center is ' + event.center.toString() + ' and radius is ' + event.radius.toFixed(1) + ' meters');
             });
         });
+        toolbar.addListener('ellipseCreated', function(event) {
+            loggingMessage('Ellipse created: center is ' + event.ellipse.toString());
+            var ellipse = new DrawHelper.EllipsePrimitive({
+                center: event.ellipse.center,
+                rotaion: event.ellipse.rotation,
+                semiMajorAxis: event.ellipse.semiMajorAxis,
+                semiMinorAxis: event.ellipse.semiMinorAxis,
+                material: Cesium.Material.fromType(Cesium.Material.RimLightingType)
+            });
+            scene.primitives.add(ellipse);
+            ellipse.setEditable();
+            ellipse.addListener('onEdited', function(ellipse) {
+                loggingMessage('Ellipse edited: center is ' + ellipse.center.toString());
+            });
+        });
         toolbar.addListener('extentCreated', function(event) {
             var extent = event.extent;
             loggingMessage('Extent created (N: ' + extent.north.toFixed(3) + ', E: ' + extent.east.toFixed(3) + ', S: ' + extent.south.toFixed(3) + ', W: ' + extent.west.toFixed(3) + ')');
