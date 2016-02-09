@@ -1130,7 +1130,7 @@ var DrawHelper = (function() {
 
     };
 
-    _.prototype.startDrawingEllipse = function(options) {
+    _.prototype.startDrawingEllipse = function startDrawingEllipse(options) {
 
         var options = copyOptions(options, defaultSurfaceOptions);
 
@@ -1158,7 +1158,7 @@ var DrawHelper = (function() {
         var mouseHandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
 
         // Now wait for start
-        mouseHandler.setInputAction(function(movement) {
+        mouseHandler.setInputAction(function _onLeftDown(movement) {
             if(movement.position != null) {
                 var cartesian = scene.camera.pickEllipsoid(movement.position, ellipsoid);
                 if (cartesian) {
@@ -1196,7 +1196,7 @@ var DrawHelper = (function() {
             }
         }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
 
-        mouseHandler.setInputAction(function(movement) {
+        mouseHandler.setInputAction(function _onMouseMove(movement) {
             var position = movement.endPosition;
             if(position != null) {
                 if(ellipse == null) {
