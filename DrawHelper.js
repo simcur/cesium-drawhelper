@@ -1183,7 +1183,12 @@ var DrawHelper = (function() {
                         markers.addBillboards([cartesian]);
                     } else {
                         if(typeof options.callback == 'function') {
-                            options.callback(ellipse);
+                            options.callback({
+                                center: ellipse.center,
+                                rotation: ellipse.rotation,
+                                semiMajorAxis: ellipse.semiMajorAxis,
+                                semiMinorAxis: ellipse.semiMinorAxis
+                            });
                         }
                         _self.stopDrawing();
                     }
@@ -2347,12 +2352,14 @@ var DrawHelper = (function() {
                 polylineIcon: "./img/glyphicons_097_vector_path_line.png",
                 polygonIcon: "./img/glyphicons_096_vector_path_polygon.png",
                 circleIcon: "./img/glyphicons_095_vector_path_circle.png",
+                ellipseIcon: "./img/glyphicons_095_vector_path_ellipse.png",
                 extentIcon: "./img/glyphicons_094_vector_path_square.png",
                 clearIcon: "./img/glyphicons_067_cleaning.png",
                 polylineDrawingOptions: defaultPolylineOptions,
                 polygonDrawingOptions: defaultPolygonOptions,
                 extentDrawingOptions: defaultExtentOptions,
-                circleDrawingOptions: defaultCircleOptions
+                circleDrawingOptions: defaultCircleOptions,
+                circleEllipseOptions: defaultEllipseOptions
             };
 
             fillOptions(options, drawOptions);
@@ -2415,6 +2422,14 @@ var DrawHelper = (function() {
                 drawHelper.startDrawingCircle({
                     callback: function(center, radius) {
                         _self.executeListeners({name: 'circleCreated', center: center, radius: radius});
+                    }
+                });
+            })
+
+            addIcon('ellipse', options.ellipseIcon, 'Click to start drawing an Ellipse', function() {
+                drawHelper.startDrawingEllipse({
+                    callback: function(ellipse) {
+                        _self.executeListeners({name: 'ellipseCreated', ellipse: ellipse});
                     }
                 });
             })
