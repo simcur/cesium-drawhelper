@@ -25,6 +25,23 @@ var DrawHelper = (function() {
 
     }
 
+    function normalizeLon(lon) {
+        while(lon < -Cesium.Math.PI_OVER_TWO) {
+            lon += Cesium.Math.PI;
+        }
+        while(lon > Cesium.Math.PI_OVER_TWO) {
+            lon -= Cesium.Math.PI;
+        }
+        return lon;
+    }
+
+    function computeMoveTranslation(position, initialPosition) {
+        var lonMoveAmt = position.longitude - initialPosition.longitude;
+        var latMoveAmt = position.latitude - initialPosition.latitude;
+        return new Cesium.Cartesian2(normalizeLon(lonMoveAmt), latMoveAmt);
+    }
+
+
     _.prototype.initialiseHandlers = function() {
         var scene = this._scene;
         var _self = this;
@@ -1756,8 +1773,7 @@ var DrawHelper = (function() {
                                         }, Cesium.ScreenSpaceEventType.LEFT_UP);
                                     },
                                     onDrag: function onExtentDrag(position) {
-                                        var translation = new Cesium.Cartesian2(position.longitude - _self._initialPrimitiveDragPosition.longitude, position.latitude - _self._initialPrimitiveDragPosition.latitude);
-
+                                        var translation = computeMoveTranslation(position, _self._initialPrimitiveDragPosition);
                                         // update extent primitive and marker positions
                                         var corners = getExtentCorners(_self.extent);
                                         var northwestCorner = ellipsoid.cartesianToCartographic(corners[0]);
@@ -2372,6 +2388,23 @@ var DrawHelper = (function() {
 
         if ((e.north - e.south) < epsilon) {
             e.north += epsilon * 2.0;
+        }
+
+        // swap east and west values to make the rectangle the smallest possible, this is to work around dateline issues
+        var shouldSwap = false;
+        // if (mx.longitude < mn.longitude) {
+        if (Math.abs(mn.longitude - mx.longitude) > Math.PI) {
+            var diff = mn.longitude - mx.longitude;
+            var normalizedDiff = normalizeLon(mn.longitude) - normalizeLon(mx.longitude);
+            if (Math.abs(normalizedDiff) < Math.abs(diff)) {
+                shouldSwap = true;
+            }
+        }
+
+        if (shouldSwap) {
+            var temp = e.west;
+            e.west = e.east;
+            e.east = temp;
         }
 
         return e;
