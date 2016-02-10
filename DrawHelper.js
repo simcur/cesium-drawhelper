@@ -1778,16 +1778,21 @@ var DrawHelper = (function() {
                                         var corners = getExtentCorners(_self.extent);
                                         var northwestCorner = ellipsoid.cartesianToCartographic(corners[0]);
                                         var southeastCorner = ellipsoid.cartesianToCartographic(corners[2]);
+
                                         northwestCorner.longitude += translation.x;
                                         northwestCorner.latitude += translation.y;
                                         southeastCorner.longitude += translation.x;
                                         southeastCorner.latitude += translation.y;
 
-                                        _self._createPrimitive = true;
-                                        _self.extent = getExtent(northwestCorner, southeastCorner);
-                                        _self._markers.updateBillboardsPositions(getExtentCorners(extent.extent));
+                                        // only allow the shape to move if it's not going to move over the pole
+                                        if (northwestCorner.latitude < Cesium.Math.PI_OVER_TWO &&
+                                                southeastCorner.latitude > -Cesium.Math.PI_OVER_TWO) {
+                                            _self._createPrimitive = true;
+                                            _self.extent = getExtent(northwestCorner, southeastCorner);
+                                            _self._markers.updateBillboardsPositions(getExtentCorners(extent.extent));
 
-                                        _self._initialPrimitiveDragPosition = position;
+                                            _self._initialPrimitiveDragPosition = position;
+                                        }
                                     },
                                     onDragEnd: function onExtentDragEnd(position) {
                                         onEdited();
