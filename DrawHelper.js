@@ -561,6 +561,14 @@ var DrawHelper = (function() {
                 return;
             }
 
+            if (this.semiMajorAxis <= 0) {
+                this.semiMajorAxis = 1;
+            }
+
+            if (this.semiMinorAxis <= 0) {
+                this.semiMinorAxis = 1;
+            }
+
             return new Cesium.EllipseGeometry({
                         center : this.center,
                         semiMajorAxis : this.semiMajorAxis,
