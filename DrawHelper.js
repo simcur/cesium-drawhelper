@@ -2375,44 +2375,43 @@ var DrawHelper = (function() {
         return new _.DrawHelperWidget(this, options);
     }
 
-    function getExtent(mn, mx) {
-        var e = new Cesium.Rectangle();
+    function getExtent(corner, oppositeCorner) {
+        var extent = new Cesium.Rectangle();
 
         // Re-order so west < east and south < north
-        e.west = Math.min(mn.longitude, mx.longitude);
-        e.east = Math.max(mn.longitude, mx.longitude);
-        e.south = Math.min(mn.latitude, mx.latitude);
-        e.north = Math.max(mn.latitude, mx.latitude);
+        extent.west = Math.min(corner.longitude, oppositeCorner.longitude);
+        extent.east = Math.max(corner.longitude, oppositeCorner.longitude);
+        extent.south = Math.min(corner.latitude, oppositeCorner.latitude);
+        extent.north = Math.max(corner.latitude, oppositeCorner.latitude);
 
         // Check for approx equal (shouldn't require abs due to re-order)
         var epsilon = Cesium.Math.EPSILON7;
 
-        if ((e.east - e.west) < epsilon) {
-            e.east += epsilon * 2.0;
+        if ((extent.east - extent.west) < epsilon) {
+            extent.east += epsilon * 2.0;
         }
 
-        if ((e.north - e.south) < epsilon) {
-            e.north += epsilon * 2.0;
+        if ((extent.north - extent.south) < epsilon) {
+            extent.north += epsilon * 2.0;
         }
 
         // swap east and west values to make the rectangle the smallest possible, this is to work around dateline issues
         var shouldSwap = false;
-        // if (mx.longitude < mn.longitude) {
-        if (Math.abs(mn.longitude - mx.longitude) > Math.PI) {
-            var diff = mn.longitude - mx.longitude;
-            var normalizedDiff = normalizeLon(mn.longitude) - normalizeLon(mx.longitude);
+        if (Math.abs(corner.longitude - oppositeCorner.longitude) > Math.PI) {
+            var diff = corner.longitude - oppositeCorner.longitude;
+            var normalizedDiff = normalizeLon(corner.longitude) - normalizeLon(oppositeCorner.longitude);
             if (Math.abs(normalizedDiff) < Math.abs(diff)) {
                 shouldSwap = true;
             }
         }
 
         if (shouldSwap) {
-            var temp = e.west;
-            e.west = e.east;
-            e.east = temp;
+            var temp = extent.west;
+            extent.west = extent.east;
+            extent.east = temp;
         }
 
-        return e;
+        return extent;
     };
 
     function createTooltip(frameDiv) {
