@@ -60,7 +60,7 @@
         var scene = cesiumWidget.scene;
 
         // start the draw helper to enable shape creation and editing
-        var drawHelper = new DrawHelper(cesiumWidget);
+        var drawHelper = new DrawHelper(cesiumWidget, 'img/');
         var toolbar = drawHelper.addToolbar(document.getElementById("toolbar"), {
             buttons: ['marker', 'polyline', 'polygon', 'circle', 'extent']
         });

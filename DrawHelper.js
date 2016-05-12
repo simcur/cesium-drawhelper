@@ -2426,13 +2426,13 @@ var DrawHelper = (function() {
             }
 
             var drawOptions = {
-                markerIcon: _.resourcePath + "glyphicons_242_google_maps.png",
-                polylineIcon: _.resourcePath + "glyphicons_097_vector_path_line.png",
-                polygonIcon: _.resourcePath + "glyphicons_096_vector_path_polygon.png",
-                circleIcon: _.resourcePath + "glyphicons_095_vector_path_circle.png",
-                ellipseIcon: _.resourcePath + "glyphicons_095_vector_path_ellipse.png",
-                extentIcon: _.resourcePath + "glyphicons_094_vector_path_square.png",
-                clearIcon: _.resourcePath + "glyphicons_067_cleaning.png",
+                markerIcon: drawHelper.resourcePath + "glyphicons_242_google_maps.png",
+                polylineIcon: drawHelper.resourcePath + "glyphicons_097_vector_path_line.png",
+                polygonIcon: drawHelper.resourcePath + "glyphicons_096_vector_path_polygon.png",
+                circleIcon: drawHelper.resourcePath + "glyphicons_095_vector_path_circle.png",
+                ellipseIcon: drawHelper.resourcePath + "glyphicons_095_vector_path_ellipse.png",
+                extentIcon: drawHelper.resourcePath + "glyphicons_094_vector_path_square.png",
+                clearIcon: drawHelper.resourcePath + "glyphicons_067_cleaning.png",
                 polylineDrawingOptions: defaultPolylineOptions,
                 polygonDrawingOptions: defaultPolygonOptions,
                 extentDrawingOptions: defaultExtentOptions,
